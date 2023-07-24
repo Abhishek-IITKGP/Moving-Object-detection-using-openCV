@@ -2,15 +2,13 @@
 
 
 This repository contains a Python script that uses the OpenCV library to perform moving object detection using a webcam or camera feed. The script captures video frames, compares each frame with the initial frame (background), and detects moving objects in the scene.
-Requirements
+# Requirements
 
     Python 3
     OpenCV library
     imutils library
 
 You can install the required libraries using pip:
-
-bash
 
 pip install opencv-python
 pip install imutils
