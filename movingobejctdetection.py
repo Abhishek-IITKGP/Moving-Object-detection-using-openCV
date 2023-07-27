@@ -2,12 +2,14 @@ import cv2
 import time
 import imutils
 
+# Create a GMM-based background subtractor
+bg_subtractor = cv2.createBackgroundSubtractorMOG2()
+
 # Open the camera (webcam in this case). '0' denotes the default camera.
 cam = cv2.VideoCapture(0)
 
 # Initialize variables
-firstFrame = None  # Store the first frame (background) to compare with subsequent frames
-area = 10  # Minimum contour area required to consider it as a moving object
+area = 50  # Minimum contour area required to consider it as a moving object
 
 while True:
     # Read a frame from the camera
@@ -19,28 +21,15 @@ while True:
     # Resize the frame for faster processing
     img = imutils.resize(img, width=700)
 
-    # Convert the frame to grayscale
-    grayimg = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    # Apply the GMM-based background subtraction
+    fg_mask = bg_subtractor.apply(img)
 
-    # Apply Gaussian blur to reduce noise and improve object detection
-    grayimg = cv2.GaussianBlur(grayimg, (21, 21), 0)
+    # Clean up the foreground mask by removing noise and shadows
+    fg_mask = cv2.erode(fg_mask, None, iterations=6)
+    fg_mask = cv2.dilate(fg_mask, None, iterations=6)
 
-    if firstFrame is None:
-        # If this is the first frame, save it as the reference background
-        firstFrame = grayimg
-        continue
-
-    # Calculate the absolute difference between the current frame and the reference background
-    imgdiff = cv2.absdiff(firstFrame, grayimg)
-
-    # Apply thresholding to create a binary image (black and white) for easy contour detection
-    threshimg = cv2.threshold(imgdiff, 100, 255, cv2.THRESH_BINARY)[1]
-
-    # Dilate the thresholded image to fill gaps and improve object detection
-    threshimg = cv2.dilate(threshimg, None, iterations=3)
-
-    # Find contours in the thresholded image
-    cnts = cv2.findContours(threshimg.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    # Find contours in the foreground mask
+    cnts = cv2.findContours(fg_mask.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     cnts = imutils.grab_contours(cnts)
 
     for c in cnts:
@@ -64,8 +53,7 @@ while True:
 
     # Show the processed frames in separate windows
     cv2.imshow('cameraFeed', img)  # Original frame with rectangles drawn
-    cv2.imshow('thresh', threshimg)  # Thresholded binary image
-    cv2.imshow('image distance', imgdiff)  # Absolute difference image
+    cv2.imshow('foreground', fg_mask)  # Foreground mask
 
     # Check for user input to break the loop
     key = cv2.waitKey(1) & 0xFF
